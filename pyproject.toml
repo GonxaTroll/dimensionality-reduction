@@ -39,6 +39,9 @@ dev = [
     "flake8>=4.0.0",
     "mypy>=0.950",
 ]
+examples = [
+    "scikit-learn>=1.0.0",
+]
 
 [project.urls]
 Homepage = "https://github.com/GonxaTroll/dimensionality-reduction"

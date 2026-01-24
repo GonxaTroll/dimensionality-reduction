@@ -1,1 +1,1 @@
-"""Tests for preprocessing utilities."""
+"""Tests for dimensionality reduction utilities."""

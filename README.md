@@ -30,6 +30,12 @@ pip install -e .
 pip install -e ".[dev]"
 ```
 
+### With examples
+
+```bash
+pip install -e ".[examples]"
+```
+
 ## Quick Start
 
 ```python

@@ -14,6 +14,10 @@ A complete example showing:
 
 **Requirements:**
 ```bash
+# Install the package with examples dependencies
+pip install -e ".[examples]"
+
+# Or install scikit-learn separately
 pip install scikit-learn
 ```
 
