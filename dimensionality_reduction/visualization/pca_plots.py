@@ -127,9 +127,9 @@ def plot_loadings_2d(loadings: np.ndarray, variables: List[str],
 
     for i in range(n):
         v1, v2 = loadings[pc1 - 1, i], loadings[pc2 - 1, i]
+        ax.arrow(0, 0, v1, v2, alpha = 0.5, head_width = 0.02, head_length = 0.02)
         if draw_labels:
-            ax.text(v1 * 1.15, v2 * 1.15, variables[i],
-                   color='g', ha='center', va='center')
+            ax.text(v1 * 1.05, v2 * 1.05, variables[i], color = 'g', ha = 'center', va = 'center')
 
     ax.set_xlabel(f"PC {pc1}")
     ax.set_ylabel(f"PC {pc2}")
@@ -234,7 +234,6 @@ def plot_variance_explained(explained_variance_ratio: np.ndarray,
     plt.tight_layout()
     return fig
 
-#############################################################################################
 
 def plot_eigenvalues(eigenvalues: np.ndarray, first_n: Union[int, str] = "all",
                      figsize: tuple = (10, 6)) -> plt.Figure:
@@ -264,13 +263,13 @@ def plot_eigenvalues(eigenvalues: np.ndarray, first_n: Union[int, str] = "all",
     ax.bar(x = list(range(1, len(eigenvalues_list) + 1)), height = eigenvalues_list)
     ax.set_xlabel("Principal Component")
     ax.set_ylabel("Eigenvalue (explained variance)")
-    ax.hlines(y = 1, xmin = 1, xmax = len(eigenvalues_list) + 1,
-              colors="red", linestyles="dashed", label="Kaiser criterion (λ=1)")
+    ax.axhline(y = 1, color="red", linestyle = "dashed", label = "Kaiser criterion (λ=1)")
     ax.set_title("Explained variance for each PC")
     ax.legend()
     ax.grid(True, alpha=0.3)
     plt.tight_layout()
     return fig
+
 
 def plot_contribs(data: np.ndarray, loadings: np.ndarray,
                   indivs: Union[int, List[int]], pc: int,
