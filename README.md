@@ -105,16 +105,6 @@ Normalize data to [0, 1] range.
 **Returns:**
 - Tuple of (normalized_data, min_val, max_val)
 
-#### `select_features(data, variance_threshold=0.0)`
-Select features based on variance threshold.
-
-**Parameters:**
-- `data`: Input data array (n_samples, n_features)
-- `variance_threshold`: Features with variance below this will be removed
-
-**Returns:**
-- Tuple of (selected_data, feature_indices)
-
 ### Visualization Module
 
 #### `plot_loadings(loadings, feature_names=None, component_idx=0, top_n=None, figsize=(10, 6))`
