@@ -1,6 +1,7 @@
 """Tests for PCAModel wrapper."""
 
 import numpy as np
+import pandas as pd
 import matplotlib.pyplot as plt
 
 from dimensionality_reduction import PCAModel
@@ -8,23 +9,23 @@ from dimensionality_reduction import PCAModel
 
 def test_fit_and_transform_shapes():
     np.random.seed(0)
-    data = np.random.randn(40, 6)
+    data = pd.DataFrame(np.random.randn(40, 6), columns=[f"f{i}" for i in range(6)])
 
-    model = PCAModel.fit(data, n_components=3, preprocessing="standardize")
+    model = PCAModel(data).fit(n_components=3, preprocessing="standardize")
 
     assert model.scores_.shape == (40, 3)
     assert model.loadings_.shape == (3, 6)
     assert model.explained_variance_ratio_.shape[0] == 3
 
-    new_data = np.random.randn(5, 6)
+    new_data = pd.DataFrame(np.random.randn(5, 6), columns=[f"f{i}" for i in range(6)])
     transformed = model.transform(new_data)
     assert transformed.shape == (5, 3)
 
 
 def test_plot_helpers_return_figures():
     np.random.seed(1)
-    data = np.random.randn(30, 4)
-    model = PCAModel.fit(data, n_components=3, preprocessing="standardize")
+    data = pd.DataFrame(np.random.randn(30, 4), columns=[f"f{i}" for i in range(4)])
+    model = PCAModel(data).fit(n_components=3, preprocessing="standardize")
 
     fig1 = model.plot_scores()
     fig2 = model.plot_loadings(component_idx=0)
@@ -51,8 +52,8 @@ def test_plot_helpers_return_figures():
 
 def test_analysis_helpers_return_values():
     np.random.seed(2)
-    data = np.random.randn(25, 5)
-    model = PCAModel.fit(data, n_components=3, preprocessing="standardize")
+    data = pd.DataFrame(np.random.randn(25, 5), columns=[f"f{i}" for i in range(5)])
+    model = PCAModel(data).fit(n_components=3, preprocessing="standardize")
 
     t2, f95, f99 = model.t2(plot=False)
     spe, c95, c99 = model.spe(plot=False)

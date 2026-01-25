@@ -1,13 +1,14 @@
 """
 High-level PCA model wrapper.
 
-Encapsulates original data, preprocessed data, and a fitted PCA model, and
-exposes convenience methods for plotting and diagnostics using the existing
+Encapsulates original data (pandas DataFrame), preprocessing, and a fitted PCA model,
+and exposes convenience methods for plotting and diagnostics using the existing
 utility functions in this package.
 """
 from typing import Optional, Sequence, Tuple, Union
 
 import numpy as np
+import pandas as pd
 from sklearn.decomposition import PCA
 
 from .preprocessing.scaler import normalize, standardize
@@ -30,113 +31,111 @@ from .visualization import (
 class PCAModel:
     """Wrapper that keeps data, preprocessing, and PCA results together."""
 
-    def __init__(
-        self,
-        original_data: np.ndarray,
-        preprocessed_data: np.ndarray,
-        pca: PCA,
-        *,
-        preprocessing: str = "none",
-        feature_names: Optional[Sequence[str]] = None,
-        scale_params: Optional[dict] = None,
-        scores: Optional[np.ndarray] = None,
-    ) -> None:
-        self.original_data = np.asarray(original_data)
-        self.preprocessed_data = np.asarray(preprocessed_data)
-        self.pca = pca
-        self.preprocessing = preprocessing
-        self.feature_names = list(feature_names) if feature_names is not None else None
-        self.scale_params = scale_params or {}
+    def __init__(self, data: pd.DataFrame) -> None:
+        if not isinstance(data, pd.DataFrame):
+            raise TypeError("PCAModel expects a pandas DataFrame as input")
 
-        self.scores_ = scores if scores is not None else self.pca.transform(self.preprocessed_data)
-        self.loadings_ = self.pca.components_
-        self.explained_variance_ = self.pca.explained_variance_
-        self.explained_variance_ratio_ = self.pca.explained_variance_ratio_
+        self.original_df = data.copy()
+        self.original_data = self.original_df.to_numpy()
+        self.feature_names = list(self.original_df.columns)
+
+        # Will be populated after fit
+        self.preprocessing: str = "none"
+        self.preprocessed_data: Optional[np.ndarray] = None
+        self.scale_params: dict = {}
+        self.pca: Optional[PCA] = None
+        self.scores_: Optional[np.ndarray] = None
+        self.loadings_: Optional[np.ndarray] = None
+        self.explained_variance_: Optional[np.ndarray] = None
+        self.explained_variance_ratio_: Optional[np.ndarray] = None
 
     # ------------------------------------------------------------------
-    # Construction helpers
+    # Fitting
     # ------------------------------------------------------------------
-    @classmethod
     def fit(
-        cls,
-        data: np.ndarray,
+        self,
         *,
         n_components: Optional[Union[int, float]] = None,
         preprocessing: str = "standardize",
-        feature_names: Optional[Sequence[str]] = None,
         **pca_kwargs,
     ) -> "PCAModel":
-        """Preprocess data, fit PCA, and return a ready-to-use wrapper."""
-        preprocessing = (preprocessing or "none").lower()
-        scale_params = {}
+        """Preprocess stored data, fit PCA, and cache results."""
+        self.preprocessing = (preprocessing or "none").lower()
+        self.preprocessed_data, self.scale_params = self._preprocess(self.original_data, self.preprocessing)
 
-        if preprocessing == "standardize":
-            preprocessed, mean_, std_ = standardize(data)
-            scale_params = {"mean": mean_, "std": std_}
-        elif preprocessing == "normalize":
-            preprocessed, min_, max_ = normalize(data)
-            scale_params = {"min": min_, "max": max_}
-        elif preprocessing in ("none", "raw"):
-            preprocessed = np.asarray(data)
-        else:
-            raise ValueError("preprocessing must be one of: standardize, normalize, none")
-
-        pca = PCA(n_components=n_components, **pca_kwargs)
-        scores = pca.fit_transform(preprocessed)
-
-        return cls(
-            original_data=data,
-            preprocessed_data=preprocessed,
-            pca=pca,
-            preprocessing=preprocessing,
-            feature_names=feature_names,
-            scale_params=scale_params,
-            scores=scores,
-        )
+        self.pca = PCA(n_components=n_components, **pca_kwargs)
+        self.scores_ = self.pca.fit_transform(self.preprocessed_data)
+        self.loadings_ = self.pca.components_
+        self.explained_variance_ = self.pca.explained_variance_
+        self.explained_variance_ratio_ = self.pca.explained_variance_ratio_
+        return self
 
     # ------------------------------------------------------------------
     # Properties
     # ------------------------------------------------------------------
     @property
     def n_samples(self) -> int:
-        return self.preprocessed_data.shape[0]
+        return self.original_data.shape[0]
 
     @property
     def n_features(self) -> int:
-        return self.preprocessed_data.shape[1]
+        return self.original_data.shape[1]
 
     @property
     def n_components(self) -> int:
-        return self.pca.n_components_ if hasattr(self.pca, "n_components_") else self.pca.n_components
+        self._require_fitted()
+        return self.pca.n_components_  # type: ignore[union-attr]
 
     # ------------------------------------------------------------------
-    # Transformation helpers
+    # Internal helpers
     # ------------------------------------------------------------------
-    def _apply_preprocessing(self, data: np.ndarray) -> np.ndarray:
-        """Apply the stored preprocessing to new data."""
-        arr = np.asarray(data)
+    def _preprocess(self, data: np.ndarray, preprocessing: str) -> Tuple[np.ndarray, dict]:
+        if preprocessing == "standardize":
+            preprocessed, mean_, std_ = standardize(data)
+            return preprocessed, {"mean": mean_, "std": std_}
+        if preprocessing == "normalize":
+            preprocessed, min_, max_ = normalize(data)
+            return preprocessed, {"min": min_, "max": max_}
+        if preprocessing in ("none", "raw"):
+            return np.asarray(data), {}
+        raise ValueError("preprocessing must be one of: standardize, normalize, none")
+
+    def _apply_preprocessing(self, data: Union[np.ndarray, pd.DataFrame]) -> np.ndarray:
+        if self.preprocessing == "none":
+            return np.asarray(data)
+
         if self.preprocessing == "standardize":
             mean_ = self.scale_params.get("mean")
             std_ = self.scale_params.get("std")
             if mean_ is None or std_ is None:
-                mean_ = np.mean(arr, axis=0)
-                std_ = np.std(arr, axis=0)
+                raise RuntimeError("Model not fitted: preprocessing parameters missing")
+            arr = np.asarray(data)
             std_ = np.where(std_ == 0, 1, std_)
             return (arr - mean_) / std_
+
         if self.preprocessing == "normalize":
             min_ = self.scale_params.get("min")
             max_ = self.scale_params.get("max")
             if min_ is None or max_ is None:
-                min_ = np.min(arr, axis=0)
-                max_ = np.max(arr, axis=0)
+                raise RuntimeError("Model not fitted: preprocessing parameters missing")
+            arr = np.asarray(data)
             range_ = np.where((max_ - min_) == 0, 1, (max_ - min_))
             return (arr - min_) / range_
-        return arr
 
-    def transform(self, data: np.ndarray) -> np.ndarray:
+        return np.asarray(data)
+
+    def _require_fitted(self) -> None:
+        if self.pca is None or self.scores_ is None or self.loadings_ is None:
+            raise RuntimeError("PCA model not fitted. Call fit() first.")
+
+    # ------------------------------------------------------------------
+    # Transformation helpers
+    # ------------------------------------------------------------------
+    def transform(self, data: Union[np.ndarray, pd.DataFrame]) -> np.ndarray:
         """Preprocess with stored parameters and transform with the fitted PCA."""
+        self._require_fitted()
         processed = self._apply_preprocessing(data)
-        return self.pca.transform(processed)
+        return self.pca.transform(processed)  # type: ignore[arg-type]
 
     # ------------------------------------------------------------------
     # Plotting helpers
@@ -150,6 +149,7 @@ class PCAModel:
         annotate: Optional[Sequence[int]] = None,
         figsize: tuple = (10, 8),
     ):
+        self._require_fitted()
         return _plot_scores(self.scores_, pc1=pc1, pc2=pc2, score_color=score_color, annotate=annotate, figsize=figsize)
 
     def plot_loadings(
@@ -159,7 +159,8 @@ class PCAModel:
         top_n: Optional[int] = None,
         figsize: tuple = (10, 6),
     ):
-        loadings = self.loadings_.T
+        self._require_fitted()
+        loadings = self.loadings_.T  # (n_features, n_components)
         return _plot_loadings(loadings, feature_names=self.feature_names, component_idx=component_idx, top_n=top_n, figsize=figsize)
 
     def plot_loadings_2d(
@@ -171,13 +172,16 @@ class PCAModel:
         color_by: Optional[str] = "contrib",
         figsize: tuple = (10, 8),
     ):
+        self._require_fitted()
         variables = self.feature_names if self.feature_names is not None else [f"Var {i}" for i in range(self.n_features)]
         return _plot_loadings_2d(self.loadings_, variables, pc1=pc1, pc2=pc2, draw_labels=draw_labels, color_by=color_by, figsize=figsize)
 
     def plot_variance_explained(self, *, figsize: tuple = (10, 6)):
+        self._require_fitted()
         return _plot_variance_explained(self.explained_variance_ratio_, figsize=figsize, num_variables=self.n_features)
 
     def plot_eigenvalues(self, *, first_n: Union[int, str] = "all", figsize: tuple = (10, 6)):
+        self._require_fitted()
         return _plot_eigenvalues(self.explained_variance_, first_n=first_n, figsize=figsize)
 
     def plot_contribs(
@@ -190,6 +194,7 @@ class PCAModel:
         use_preprocessed: bool = True,
         figsize: tuple = (12, 6),
     ):
+        self._require_fitted()
         data = self.preprocessed_data if use_preprocessed else self.original_data
         variable_names = list(variable_names) if variable_names is not None else None
         return _plot_contribs(data, self.loadings_, indivs=indivs, pc=pc, variable_names=variable_names, simca_style=simca_style, figsize=figsize)
@@ -198,17 +203,21 @@ class PCAModel:
     # Analysis helpers
     # ------------------------------------------------------------------
     def kaiser_components(self) -> np.ndarray:
+        self._require_fitted()
         return _kaiser(self.explained_variance_)
 
     def sce(self, selected_components: Optional[int] = None) -> np.ndarray:
+        self._require_fitted()
         k = selected_components or self.n_components
         return _compute_sce(self.scores_, k)
 
     def t2(self, selected_components: Optional[int] = None, *, plot: bool = False, figsize: tuple = (10, 6)) -> Tuple[np.ndarray, float, float]:
+        self._require_fitted()
         k = selected_components or self.n_components
         return _compute_t2_hotelling(self.scores_, self.explained_variance_, k, plot=plot, figsize=figsize)
 
     def spe(self, selected_components: Optional[int] = None, *, plot: bool = False, figsize: tuple = (10, 6)) -> Tuple[np.ndarray, float, float]:
+        self._require_fitted()
         k = selected_components or self.n_components
         return _compute_spe(self.preprocessed_data, self.scores_, self.loadings_, k, plot=plot, figsize=figsize)
 
@@ -219,15 +228,18 @@ class PCAModel:
         plot: bool = False,
         figsize: tuple = (10, 6),
     ) -> Tuple[np.ndarray, float, float]:
+        self._require_fitted()
         k = selected_components or self.n_components
         return _compute_spe_jm(self.preprocessed_data, self.scores_, self.loadings_, self.explained_variance_, k, plot=plot, figsize=figsize)
 
     def outliers_from_t2(self, selected_components: Optional[int] = None, *, alpha: float = 0.99) -> Tuple[np.ndarray, float]:
+        self._require_fitted()
         t2, f95, f99 = self.t2(selected_components, plot=False)
         threshold = f99 if alpha >= 0.99 else f95
         return _get_outlier_indexes(t2, threshold), threshold
 
     def outliers_from_spe(self, selected_components: Optional[int] = None, *, alpha: float = 0.99) -> Tuple[np.ndarray, float]:
+        self._require_fitted()
         spe_values, c95, c99 = self.spe(selected_components, plot=False)
         threshold = c99 if alpha >= 0.99 else c95
         return _get_outlier_indexes(spe_values, threshold), threshold
@@ -237,6 +249,7 @@ class PCAModel:
     # ------------------------------------------------------------------
     def reconstruct(self, selected_components: Optional[int] = None) -> np.ndarray:
         """Reconstruct data using selected components (defaults to all)."""
+        self._require_fitted()
         k = selected_components or self.n_components
         scores_subset = self.scores_[:, :k]
         loadings_subset = self.loadings_[:k, :]
