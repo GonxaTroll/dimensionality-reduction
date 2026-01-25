@@ -303,7 +303,7 @@ def plot_contribs(data: np.ndarray, loadings: np.ndarray,
     """
     fig, ax = plt.subplots(figsize=figsize)
 
-    if isinstance(indivs, int):
+    if isinstance(indivs, int) or isinstance(indivs, np.integer):
         indivs = [indivs]
 
     subset = data[indivs, :]

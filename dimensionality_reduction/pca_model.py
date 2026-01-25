@@ -153,12 +153,12 @@ class PCAModel:
 
     def plot_contribs(self, indivs: Union[int, Sequence[int]], pc: int, *,
                       variable_names: Optional[Sequence[str]] = None, simca_style: bool = True,
-                      use_preprocessed: bool = True, figsize: tuple = (12, 6),
+                      figsize: tuple = (12, 6),
     ):
         self._require_fitted()
-        data = self.preprocessed_data if use_preprocessed else self.original_data
-        variable_names = list(variable_names) if variable_names is not None else None
-        return _plot_contribs(data, self.loadings_, indivs = indivs, pc = pc,
+        variable_names = list(variable_names) if variable_names is not None\
+                                              else self.original_df.columns
+        return _plot_contribs(self.original_data, self.loadings_, indivs = indivs, pc = pc,
                               variable_names = variable_names, simca_style = simca_style,
                               figsize = figsize)
 
