@@ -10,8 +10,7 @@ from typing import Optional, Sequence, Tuple, Union
 import numpy as np
 import pandas as pd
 from sklearn.decomposition import PCA
-
-from .preprocessing.scaler import normalize, standardize
+from sklearn.preprocessing import StandardScaler, MinMaxScaler
 from .visualization import (
     plot_scores as _plot_scores,
     plot_loadings as _plot_loadings,
@@ -41,8 +40,9 @@ class PCAModel:
 
         # Will be populated after fit
         self.preprocessing: str = "none"
+        self.preprocessed_df: Optional[pd.DataFrame] = None
         self.preprocessed_data: Optional[np.ndarray] = None
-        self.scale_params: dict = {}
+        self.scaler_: Optional[Union[StandardScaler, MinMaxScaler]] = None
         self.pca: Optional[PCA] = None
         self.scores_: Optional[np.ndarray] = None
         self.loadings_: Optional[np.ndarray] = None
@@ -59,9 +59,10 @@ class PCAModel:
         preprocessing: str = "standardize",
         **pca_kwargs,
     ) -> "PCAModel":
-        """Preprocess stored data, fit PCA, and cache results."""
+        """Preprocess stored data (as DataFrame), fit PCA, and cache results."""
         self.preprocessing = (preprocessing or "none").lower()
-        self.preprocessed_data, self.scale_params = self._preprocess(self.original_data, self.preprocessing)
+        self.preprocessed_df = self._preprocess_df(self.original_df, self.preprocessing)
+        self.preprocessed_data = self.preprocessed_df.to_numpy()
 
         self.pca = PCA(n_components=n_components, **pca_kwargs)
         self.scores_ = self.pca.fit_transform(self.preprocessed_data)
@@ -89,40 +90,33 @@ class PCAModel:
     # ------------------------------------------------------------------
     # Internal helpers
     # ------------------------------------------------------------------
-    def _preprocess(self, data: np.ndarray, preprocessing: str) -> Tuple[np.ndarray, dict]:
+    def _preprocess_df(self, df: pd.DataFrame, preprocessing: str) -> pd.DataFrame:
+        """Preprocess a pandas DataFrame using sklearn scalers."""
         if preprocessing == "standardize":
-            preprocessed, mean_, std_ = standardize(data)
-            return preprocessed, {"mean": mean_, "std": std_}
+            self.scaler_ = StandardScaler()
+            preprocessed_np = self.scaler_.fit_transform(df)
+            return pd.DataFrame(preprocessed_np, columns=df.columns, index=df.index)
+
         if preprocessing == "normalize":
-            preprocessed, min_, max_ = normalize(data)
-            return preprocessed, {"min": min_, "max": max_}
+            self.scaler_ = MinMaxScaler()
+            preprocessed_np = self.scaler_.fit_transform(df)
+            return pd.DataFrame(preprocessed_np, columns=df.columns, index=df.index)
+
         if preprocessing in ("none", "raw"):
-            return np.asarray(data), {}
+            self.scaler_ = None
+            return df.copy()
+
         raise ValueError("preprocessing must be one of: standardize, normalize, none")
 
     def _apply_preprocessing(self, data: Union[np.ndarray, pd.DataFrame]) -> np.ndarray:
+        """Apply stored preprocessing to data using the fitted scaler."""
         if self.preprocessing == "none":
             return np.asarray(data)
-
-        if self.preprocessing == "standardize":
-            mean_ = self.scale_params.get("mean")
-            std_ = self.scale_params.get("std")
-            if mean_ is None or std_ is None:
-                raise RuntimeError("Model not fitted: preprocessing parameters missing")
-            arr = np.asarray(data)
-            std_ = np.where(std_ == 0, 1, std_)
-            return (arr - mean_) / std_
-
-        if self.preprocessing == "normalize":
-            min_ = self.scale_params.get("min")
-            max_ = self.scale_params.get("max")
-            if min_ is None or max_ is None:
-                raise RuntimeError("Model not fitted: preprocessing parameters missing")
-            arr = np.asarray(data)
-            range_ = np.where((max_ - min_) == 0, 1, (max_ - min_))
-            return (arr - min_) / range_
-
-        return np.asarray(data)
+        
+        if self.scaler_ is None:
+            raise RuntimeError("Model not fitted: scaler missing")
+        
+        return self.scaler_.transform(data)
 
     def _require_fitted(self) -> None:
         if self.pca is None or self.scores_ is None or self.loadings_ is None:

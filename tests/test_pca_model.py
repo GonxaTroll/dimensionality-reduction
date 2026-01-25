@@ -16,6 +16,7 @@ def test_fit_and_transform_shapes():
     assert model.scores_.shape == (40, 3)
     assert model.loadings_.shape == (3, 6)
     assert model.explained_variance_ratio_.shape[0] == 3
+    assert model.scaler_ is not None
 
     new_data = pd.DataFrame(np.random.randn(5, 6), columns=[f"f{i}" for i in range(6)])
     transformed = model.transform(new_data)
