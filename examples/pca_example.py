@@ -13,7 +13,7 @@ from sklearn.datasets import load_iris
 # Import dimensionality_reduction utilities
 from dimensionality_reduction.preprocessing import standardize
 from dimensionality_reduction.visualization import (
-    plot_loadings, plot_components, plot_variance_explained
+    plot_loadings, plot_scores, plot_variance_explained
 )
 
 
@@ -56,11 +56,11 @@ def main():
     
     # Plot data in PC space
     print("   - Plotting components...")
-    fig2 = plot_components(
+    fig2 = plot_scores(
         X_transformed,
         labels=y,
-        component_x=0,
-        component_y=1,
+        pc1=0,
+        pc2=1,
         figsize=(10, 8)
     )
     plt.savefig("pca_components.png", dpi=150, bbox_inches='tight')
@@ -68,7 +68,9 @@ def main():
     
     # Plot variance explained
     print("   - Plotting variance explained...")
-    fig3 = plot_variance_explained(pca.explained_variance_ratio_)
+    fig3 = plot_variance_explained(pca.explained_variance_ratio_,
+                                   num_variables=X.shape[1],
+                                   figsize=(10, 6))
     plt.savefig("pca_variance_explained.png", dpi=150, bbox_inches='tight')
     print("     Saved: pca_variance_explained.png")
     
