@@ -3,8 +3,6 @@ Feature selection utilities for dimensionality reduction.
 """
 
 import numpy as np
-from typing import Union
-
 
 def select_features(data: np.ndarray, variance_threshold: float = 0.0) -> tuple:
     """
@@ -28,5 +26,5 @@ def select_features(data: np.ndarray, variance_threshold: float = 0.0) -> tuple:
     variances = np.var(data, axis=0)
     feature_indices = np.where(variances > variance_threshold)[0]
     selected_data = data[:, feature_indices]
-    
+
     return selected_data, feature_indices

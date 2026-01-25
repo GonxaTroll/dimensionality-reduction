@@ -77,14 +77,17 @@ class PCAModel:
     # ------------------------------------------------------------------
     @property
     def n_samples(self) -> int:
+        """Number of samples in the original data."""
         return self.original_data.shape[0]
 
     @property
     def n_features(self) -> int:
+        """Number of features in the original data."""
         return self.original_data.shape[1]
 
     @property
     def n_components(self) -> int:
+        """Number of components in the fitted PCA model."""
         self._require_fitted()
         return self.pca.n_components_  # type: ignore[union-attr]
 
@@ -113,64 +116,51 @@ class PCAModel:
     # ------------------------------------------------------------------
     # Plotting helpers
     # ------------------------------------------------------------------
-    def plot_scores(
-        self,
-        pc1: int = 1,
-        pc2: int = 2,
-        *,
-        score_color: Optional[np.ndarray] = None,
-        annotate: Optional[Sequence[int]] = None,
-        figsize: tuple = (10, 8),
-    ):
+    def plot_scores(self, pc1: int = 1, pc2: int = 2, *, score_color: Optional[np.ndarray] = None,
+                    annotate: Optional[Sequence[int]] = None, figsize: tuple = (10, 8)):
+        """Wrapper for score plot."""
         self._require_fitted()
-        return _plot_scores(self.scores_, pc1=pc1, pc2=pc2, score_color=score_color, annotate=annotate, figsize=figsize)
+        return _plot_scores(self.scores_, pc1 = pc1, pc2 = pc2, score_color = score_color,
+                            annotate = annotate, figsize = figsize)
 
-    def plot_loadings(
-        self,
-        component_idx: Union[int, Sequence[int]] = 0,
-        *,
-        top_n: Optional[int] = None,
-        figsize: tuple = (10, 6),
-    ):
+    def plot_loadings(self, component_idx: Union[int, Sequence[int]] = 0, *,
+                      top_n: Optional[int] = None, figsize: tuple = (10, 6)):
+        """Wrapper for loadings plot."""
         self._require_fitted()
         loadings = self.loadings_.T  # (n_features, n_components)
-        return _plot_loadings(loadings, feature_names=self.feature_names, component_idx=component_idx, top_n=top_n, figsize=figsize)
+        return _plot_loadings(loadings, feature_names = self.feature_names,
+                              component_idx = component_idx, top_n = top_n, figsize = figsize)
 
-    def plot_loadings_2d(
-        self,
-        pc1: int = 1,
-        pc2: int = 2,
-        *,
-        draw_labels: bool = False,
-        color_by: Optional[str] = "contrib",
-        figsize: tuple = (10, 8),
-    ):
+    def plot_loadings_2d(self, pc1: int = 1, pc2: int = 2, *,
+                         draw_labels: bool = False, color_by: Optional[str] = "contrib",
+                         figsize: tuple = (10, 8)):
         self._require_fitted()
-        variables = self.feature_names if self.feature_names is not None else [f"Var {i}" for i in range(self.n_features)]
-        return _plot_loadings_2d(self.loadings_, variables, pc1=pc1, pc2=pc2, draw_labels=draw_labels, color_by=color_by, figsize=figsize)
+        variables =\
+            self.feature_names if self.feature_names is not None\
+                               else [f"Var {i}" for i in range(self.n_features)]
+        return _plot_loadings_2d(self.loadings_, variables, pc1 = pc1, pc2 = pc2,
+                                 draw_labels = draw_labels, color_by = color_by,
+                                 figsize = figsize)
 
     def plot_variance_explained(self, *, figsize: tuple = (10, 6)):
         self._require_fitted()
-        return _plot_variance_explained(self.explained_variance_ratio_, figsize=figsize, num_variables=self.n_features)
+        return _plot_variance_explained(self.explained_variance_ratio_,
+                                        figsize = figsize, num_variables = self.n_features)
 
     def plot_eigenvalues(self, *, first_n: Union[int, str] = "all", figsize: tuple = (10, 6)):
         self._require_fitted()
-        return _plot_eigenvalues(self.explained_variance_, first_n=first_n, figsize=figsize)
+        return _plot_eigenvalues(self.explained_variance_, first_n = first_n, figsize = figsize)
 
-    def plot_contribs(
-        self,
-        indivs: Union[int, Sequence[int]],
-        pc: int,
-        *,
-        variable_names: Optional[Sequence[str]] = None,
-        simca_style: bool = True,
-        use_preprocessed: bool = True,
-        figsize: tuple = (12, 6),
+    def plot_contribs(self, indivs: Union[int, Sequence[int]], pc: int, *,
+                      variable_names: Optional[Sequence[str]] = None, simca_style: bool = True,
+                      use_preprocessed: bool = True, figsize: tuple = (12, 6),
     ):
         self._require_fitted()
         data = self.preprocessed_data if use_preprocessed else self.original_data
         variable_names = list(variable_names) if variable_names is not None else None
-        return _plot_contribs(data, self.loadings_, indivs=indivs, pc=pc, variable_names=variable_names, simca_style=simca_style, figsize=figsize)
+        return _plot_contribs(data, self.loadings_, indivs = indivs, pc = pc,
+                              variable_names = variable_names, simca_style = simca_style,
+                              figsize = figsize)
 
     # ------------------------------------------------------------------
     # Analysis helpers
@@ -184,34 +174,37 @@ class PCAModel:
         k = selected_components or self.n_components
         return _compute_sce(self.scores_, k)
 
-    def t2(self, selected_components: Optional[int] = None, *, plot: bool = False, figsize: tuple = (10, 6)) -> Tuple[np.ndarray, float, float]:
+    def t2(self, selected_components: Optional[int] = None, *,
+           plot: bool = False, figsize: tuple = (10, 6)) -> Tuple[np.ndarray, float, float]:
         self._require_fitted()
         k = selected_components or self.n_components
-        return _compute_t2_hotelling(self.scores_, self.explained_variance_, k, plot=plot, figsize=figsize)
+        return _compute_t2_hotelling(self.scores_, self.explained_variance_, k,
+                                     plot = plot, figsize = figsize)
 
-    def spe(self, selected_components: Optional[int] = None, *, plot: bool = False, figsize: tuple = (10, 6)) -> Tuple[np.ndarray, float, float]:
+    def spe(self, selected_components: Optional[int] = None, *,
+            plot: bool = False, figsize: tuple = (10, 6)) -> Tuple[np.ndarray, float, float]:
         self._require_fitted()
         k = selected_components or self.n_components
-        return _compute_spe(self.preprocessed_data, self.scores_, self.loadings_, k, plot=plot, figsize=figsize)
+        return _compute_spe(self.preprocessed_data, self.scores_, self.loadings_, k,
+                            plot = plot, figsize = figsize)
 
-    def spe_jackson_mudholkar(
-        self,
-        selected_components: Optional[int] = None,
-        *,
-        plot: bool = False,
-        figsize: tuple = (10, 6),
+    def spe_jackson_mudholkar(self, selected_components: Optional[int] = None, *,
+                              plot: bool = False, figsize: tuple = (10, 6),
     ) -> Tuple[np.ndarray, float, float]:
         self._require_fitted()
         k = selected_components or self.n_components
-        return _compute_spe_jm(self.preprocessed_data, self.scores_, self.loadings_, self.explained_variance_, k, plot=plot, figsize=figsize)
+        return _compute_spe_jm(self.preprocessed_data, self.scores_, self.loadings_,
+                               self.explained_variance_, k, plot = plot, figsize = figsize)
 
-    def outliers_from_t2(self, selected_components: Optional[int] = None, *, alpha: float = 0.99) -> Tuple[np.ndarray, float]:
+    def outliers_from_t2(self, selected_components: Optional[int] = None, *,
+                         alpha: float = 0.99) -> Tuple[np.ndarray, float]:
         self._require_fitted()
         t2, f95, f99 = self.t2(selected_components, plot=False)
         threshold = f99 if alpha >= 0.99 else f95
         return _get_outlier_indexes(t2, threshold), threshold
 
-    def outliers_from_spe(self, selected_components: Optional[int] = None, *, alpha: float = 0.99) -> Tuple[np.ndarray, float]:
+    def outliers_from_spe(self, selected_components: Optional[int] = None, *,
+                          alpha: float = 0.99) -> Tuple[np.ndarray, float]:
         self._require_fitted()
         spe_values, c95, c99 = self.spe(selected_components, plot=False)
         threshold = c99 if alpha >= 0.99 else c95
