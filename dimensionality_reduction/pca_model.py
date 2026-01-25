@@ -10,7 +10,8 @@ from typing import Optional, Sequence, Tuple, Union
 import numpy as np
 import pandas as pd
 from sklearn.decomposition import PCA
-from sklearn.preprocessing import StandardScaler, MinMaxScaler
+
+from .preprocessing.scaler import Scaler
 from .visualization import (
     plot_scores as _plot_scores,
     plot_loadings as _plot_loadings,
@@ -42,7 +43,7 @@ class PCAModel:
         self.preprocessing: str = "none"
         self.preprocessed_df: Optional[pd.DataFrame] = None
         self.preprocessed_data: Optional[np.ndarray] = None
-        self.scaler_: Optional[Union[StandardScaler, MinMaxScaler]] = None
+        self.scaler_: Optional[Scaler] = None
         self.pca: Optional[PCA] = None
         self.scores_: Optional[np.ndarray] = None
         self.loadings_: Optional[np.ndarray] = None
@@ -61,7 +62,7 @@ class PCAModel:
     ) -> "PCAModel":
         """Preprocess stored data (as DataFrame), fit PCA, and cache results."""
         self.preprocessing = (preprocessing or "none").lower()
-        self.preprocessed_df = self._preprocess_df(self.original_df, self.preprocessing)
+        self.preprocessed_df = self._preprocess_df()
         self.preprocessed_data = self.preprocessed_df.to_numpy()
 
         self.pca = PCA(n_components=n_components, **pca_kwargs)
@@ -90,33 +91,11 @@ class PCAModel:
     # ------------------------------------------------------------------
     # Internal helpers
     # ------------------------------------------------------------------
-    def _preprocess_df(self, df: pd.DataFrame, preprocessing: str) -> pd.DataFrame:
-        """Preprocess a pandas DataFrame using sklearn scalers."""
-        if preprocessing == "standardize":
-            self.scaler_ = StandardScaler()
-            preprocessed_np = self.scaler_.fit_transform(df)
-            return pd.DataFrame(preprocessed_np, columns=df.columns, index=df.index)
+    def _preprocess_df(self) -> pd.DataFrame:
+        """Preprocess a pandas DataFrame using the Scaler class."""
+        self.scaler_ = Scaler(method = self.preprocessing)
+        return self.scaler_.fit_transform(self.original_df)
 
-        if preprocessing == "normalize":
-            self.scaler_ = MinMaxScaler()
-            preprocessed_np = self.scaler_.fit_transform(df)
-            return pd.DataFrame(preprocessed_np, columns=df.columns, index=df.index)
-
-        if preprocessing in ("none", "raw"):
-            self.scaler_ = None
-            return df.copy()
-
-        raise ValueError("preprocessing must be one of: standardize, normalize, none")
-
-    def _apply_preprocessing(self, data: Union[np.ndarray, pd.DataFrame]) -> np.ndarray:
-        """Apply stored preprocessing to data using the fitted scaler."""
-        if self.preprocessing == "none":
-            return np.asarray(data)
-        
-        if self.scaler_ is None:
-            raise RuntimeError("Model not fitted: scaler missing")
-        
-        return self.scaler_.transform(data)
 
     def _require_fitted(self) -> None:
         if self.pca is None or self.scores_ is None or self.loadings_ is None:
@@ -128,8 +107,8 @@ class PCAModel:
     def transform(self, data: Union[np.ndarray, pd.DataFrame]) -> np.ndarray:
         """Preprocess with stored parameters and transform with the fitted PCA."""
         self._require_fitted()
-        processed = self._apply_preprocessing(data)
-        return self.pca.transform(processed)  # type: ignore[arg-type]
+        preprocessed_data = self.scaler_.transform(data)
+        return self.pca.transform(preprocessed_data)
 
     # ------------------------------------------------------------------
     # Plotting helpers
