@@ -214,12 +214,13 @@ def plot_variance_explained(explained_variance_ratio: np.ndarray,
     ax1.set_title('Variance Explained by Each Component')
     ax1.grid(True, alpha=0.3)
 
-    expected_var = 1 / num_variables
-    selected_comps = len(np.where(explained_variance_ratio > expected_var)[0])
-    print(f"Selected components (above expected variance): {selected_comps}")
-    ax1.axhline(y = expected_var, color="red", linestyle = "dashed",
-                label = f"Expected Variance: 1 / {n_components}")
-    ax1.legend()
+    if num_variables is not None:
+        expected_var = 1 / n_components
+        selected_comps = len(np.where(explained_variance_ratio > expected_var)[0])
+        print(f"Selected components (above expected variance): {selected_comps}")
+        ax1.axhline(y = expected_var, color="red", linestyle = "dashed",
+                    label = f"Expected Variance: 1 / {n_components}")
+        ax1.legend()
 
     # Cumulative variance explained
     cumulative_variance = np.cumsum(explained_variance_ratio)
