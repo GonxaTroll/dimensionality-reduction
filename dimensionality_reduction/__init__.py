@@ -10,5 +10,6 @@ __version__ = "0.1.0"
 
 from . import preprocessing
 from . import visualization
+from .pca_model import PCAModel
 
-__all__ = ["preprocessing", "visualization", "__version__"]
+__all__ = ["preprocessing", "visualization", "PCAModel", "__version__"]

@@ -1,71 +1,25 @@
-[build-system]
-requires = ["setuptools>=45", "wheel", "setuptools_scm[toml]>=6.2"]
-build-backend = "setuptools.build_meta"
-
 [project]
 name = "dimensionality-reduction"
 version = "0.1.0"
 description = "Utility functions for dimensionality reduction techniques including preprocessing and visualization"
 readme = "README.md"
-requires-python = ">=3.8"
+requires-python = ">=3.12"
 license = {text = "MIT"}
 authors = [
     {name = "GonxaTroll"},
 ]
-keywords = ["dimensionality reduction", "PCA", "preprocessing", "visualization", "machine learning"]
-classifiers = [
-    "Development Status :: 3 - Alpha",
-    "Intended Audience :: Science/Research",
-    "Intended Audience :: Developers",
-    "License :: OSI Approved :: MIT License",
-    "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.8",
-    "Programming Language :: Python :: 3.9",
-    "Programming Language :: Python :: 3.10",
-    "Programming Language :: Python :: 3.11",
-    "Topic :: Scientific/Engineering",
-    "Topic :: Scientific/Engineering :: Artificial Intelligence",
-]
 dependencies = [
-    "numpy>=1.20.0",
-    "matplotlib>=3.3.0",
+    "matplotlib>=3.10.8",
+    "numpy>=2.4.1",
+    "pandas>=3.0.0",
+    "scikit-learn>=1.8.0",
+    "scipy>=1.17.0",
+    "seaborn>=0.13.2",
 ]
 
-[project.optional-dependencies]
+[dependency-groups]
 dev = [
-    "pytest>=7.0.0",
-    "pytest-cov>=3.0.0",
-    "black>=22.0.0",
-    "flake8>=4.0.0",
-    "mypy>=0.950",
+    "ipykernel>=7.1.0",
+    "pylint>=4.0.4",
+    "pytest>=9.0.2",
 ]
-examples = [
-    "scikit-learn>=1.0.0",
-]
-
-[project.urls]
-Homepage = "https://github.com/GonxaTroll/dimensionality-reduction"
-Repository = "https://github.com/GonxaTroll/dimensionality-reduction"
-Issues = "https://github.com/GonxaTroll/dimensionality-reduction/issues"
-
-[tool.setuptools.packages.find]
-where = ["."]
-include = ["dimensionality_reduction*"]
-exclude = ["tests*", "examples*"]
-
-[tool.black]
-line-length = 88
-target-version = ['py38', 'py39', 'py310', 'py311']
-
-[tool.mypy]
-python_version = "3.8"
-warn_return_any = true
-warn_unused_configs = true
-disallow_untyped_defs = false
-
-[tool.pytest.ini_options]
-testpaths = ["tests"]
-python_files = ["test_*.py"]
-python_classes = ["Test*"]
-python_functions = ["test_*"]
-addopts = "-v --cov=dimensionality_reduction --cov-report=term-missing"

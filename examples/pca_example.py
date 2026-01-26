@@ -1,85 +1,70 @@
 """
-Example: Basic PCA analysis with preprocessing and visualization.
+Example: Basic PCA analysis with preprocessing and visualization using PCAModel.
 
 This example demonstrates how to use the dimensionality_reduction package
-to preprocess data, perform PCA, and visualize the results.
+via the PCAModel class for preprocessing, PCA, and visualization.
 """
 
-import numpy as np
 import matplotlib.pyplot as plt
-from sklearn.decomposition import PCA
 from sklearn.datasets import load_iris
-
-# Import dimensionality_reduction utilities
-from dimensionality_reduction.preprocessing import standardize
-from dimensionality_reduction.visualization import (
-    plot_loadings, plot_components, plot_variance_explained
-)
+from dimensionality_reduction import PCAModel # pylint: disable=E0401
 
 
 def main():
-    """Run PCA example on Iris dataset."""
+    """Run PCA example on Iris dataset using PCAModel."""
     # Load the Iris dataset
-    iris = load_iris()
-    X = iris.data
-    y = iris.target
-    feature_names = iris.feature_names
-    
-    print("Original data shape:", X.shape)
-    print("Feature names:", feature_names)
-    
-    # Step 1: Preprocess the data (standardization)
-    print("\n1. Standardizing the data...")
-    X_standardized, mean, std = standardize(X)
-    print(f"Mean of standardized data: {np.mean(X_standardized, axis=0)}")
-    print(f"Std of standardized data: {np.std(X_standardized, axis=0)}")
-    
-    # Step 2: Apply PCA
-    print("\n2. Applying PCA...")
-    pca = PCA(n_components=4)
-    X_transformed = pca.fit_transform(X_standardized)
-    print(f"Transformed data shape: {X_transformed.shape}")
-    
-    # Step 3: Visualize results
-    print("\n3. Creating visualizations...")
-    
+    iris = load_iris(as_frame=True)
+    df = iris.data # pylint: disable=E1101
+    y = iris.target # pylint: disable=E1101
+
+    print("=" * 60)
+    print("BASIC PCA ANALYSIS - IRIS DATASET")
+    print("=" * 60)
+    print(f"\nOriginal data shape: {df.shape}")
+    print(f"Feature names: {list(df.columns)}\n")
+
+    # Create and fit the PCA model
+    print("Fitting PCA model with standardization...")
+    model = PCAModel(df).fit(n_components=4, preprocessing="standardize")
+    print(f"PCA fitted with {model.n_components} components")
+    print(f"Explained variance ratio: {model.explained_variance_ratio_}")
+
+    # Step 2: Visualize results
+    print("\nCreating visualizations...")
+
     # Plot loadings for first component
-    print("   - Plotting loadings...")
-    fig1 = plot_loadings(
-        pca.components_.T,
-        feature_names=feature_names,
-        component_idx=0,
-        figsize=(10, 6)
-    )
+    print("  - Plotting loadings (component 1)...")
+    fig1 = model.plot_loadings(component_idx=0, figsize=(10, 6))
     plt.savefig("pca_loadings_component1.png", dpi=150, bbox_inches='tight')
-    print("     Saved: pca_loadings_component1.png")
-    
+    plt.close(fig1)
+    print("    Saved: pca_loadings_component1.png")
+
     # Plot data in PC space
-    print("   - Plotting components...")
-    fig2 = plot_components(
-        X_transformed,
-        labels=y,
-        component_x=0,
-        component_y=1,
-        figsize=(10, 8)
-    )
-    plt.savefig("pca_components.png", dpi=150, bbox_inches='tight')
-    print("     Saved: pca_components.png")
-    
+    print("  - Plotting scores (PC1 vs PC2)...")
+    fig2 = model.plot_scores(pc1=1, pc2=2, score_color=y, figsize=(10, 8))
+    plt.savefig("pca_scores.png", dpi=150, bbox_inches='tight')
+    plt.close(fig2)
+    print("    Saved: pca_scores.png")
+
     # Plot variance explained
-    print("   - Plotting variance explained...")
-    fig3 = plot_variance_explained(pca.explained_variance_ratio_)
+    print("  - Plotting variance explained...")
+    fig3 = model.plot_variance_explained(figsize=(10, 6))
     plt.savefig("pca_variance_explained.png", dpi=150, bbox_inches='tight')
-    print("     Saved: pca_variance_explained.png")
-    
+    plt.close(fig3)
+    print("    Saved: pca_variance_explained.png")
+
     # Print summary
-    print("\n4. Summary:")
-    print(f"   Total variance explained by 2 components: "
-          f"{sum(pca.explained_variance_ratio_[:2]):.2%}")
-    print(f"   Total variance explained by all components: "
-          f"{sum(pca.explained_variance_ratio_):.2%}")
-    
-    plt.close('all')
+    print("\n" + "=" * 60)
+    print("SUMMARY")
+    print("=" * 60)
+    total_variance = sum(model.explained_variance_ratio_)
+    total_variance_2_comp = sum(model.explained_variance_ratio_[:2])
+    print(f"Total variance explained by 2 components: {total_variance_2_comp:.2%}")
+    print(f"Total variance explained by all components: {total_variance:.2%}")
+    print(f"\nPreprocessing method: {model.preprocessing}")
+    print(f"Number of samples: {model.n_samples}")
+    print(f"Number of features: {model.n_features}")
+
     print("\nExample completed successfully!")
 
 
