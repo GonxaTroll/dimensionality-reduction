@@ -65,7 +65,7 @@ class PCAModel:
         self.preprocessed_df = self._preprocess_df()
         self.preprocessed_data = self.preprocessed_df.to_numpy()
 
-        self.pca = PCA(n_components=n_components, **pca_kwargs)
+        self.pca = PCA(n_components = n_components, **pca_kwargs)
         self.scores_ = self.pca.fit_transform(self.preprocessed_data)
         self.loadings_ = self.pca.components_
         self.explained_variance_ = self.pca.explained_variance_
@@ -97,7 +97,8 @@ class PCAModel:
     def _preprocess_df(self) -> pd.DataFrame:
         """Preprocess a pandas DataFrame using the Scaler class."""
         self.scaler_ = Scaler(method = self.preprocessing)
-        return self.scaler_.fit_transform(self.original_df)
+        preprocessed_data = self.scaler_.fit_transform(self.original_df)
+        return pd.DataFrame(preprocessed_data, columns = self.original_df.columns) 
 
 
     def _require_fitted(self) -> None:

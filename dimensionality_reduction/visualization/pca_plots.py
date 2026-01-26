@@ -74,7 +74,7 @@ def plot_loadings(loadings: np.ndarray, feature_names: Optional[List[str]] = Non
 
 def plot_loadings_2d(loadings: np.ndarray, variables: List[str],
                      pc1: int = 1, pc2: int = 2, draw_labels: bool = False,
-                     color_by: Optional[str] = "contrib",
+                     color_by: Optional[Union[str, List[float]]] = "contrib",
                      figsize: tuple = (10, 8)) -> plt.Figure:
     """
     Plot 2D loadings showing variable contributions to two principal components.
@@ -91,7 +91,7 @@ def plot_loadings_2d(loadings: np.ndarray, variables: List[str],
         Second principal component to plot (1-indexed). Default is 2.
     draw_labels : bool
         Whether to draw variable labels on the plot. Default is False.
-    color_by : Optional[str]
+    color_by : Optional[Union[str, List[float]]]
         Color mapping method: None, "cos2" (quality of representation), 
         or "contrib" (contribution). Default is "contrib".
     figsize : tuple
@@ -107,29 +107,35 @@ def plot_loadings_2d(loadings: np.ndarray, variables: List[str],
     n = loadings.shape[1]
 
     if color_by is None:
-        ax.scatter(loadings[pc1 - 1, :], loadings[pc2 - 1, :])
+        scatter = ax.scatter(loadings[pc1 - 1, :], loadings[pc2 - 1, :])
     elif color_by in ["cos2", "contrib"]:
         cos2 = loadings ** 2
         cos2_sums = np.sum(cos2[[pc1 - 1, pc2 - 1], :], axis=0)
-
-        if color_by == "cos2":
-            scatter = ax.scatter(loadings[pc1 - 1, :], loadings[pc2 - 1, :],
-                               c=cos2_sums, cmap='viridis')
-        else:  # contrib
+        colours = cos2_sums
+        if color_by == "contrib":
             contrib = (cos2.T / np.sum(cos2, axis=1)).T
             contrib_sum = np.sum(contrib[[pc1 - 1, pc2 - 1], :], axis=0)
-            scatter = ax.scatter(loadings[pc1 - 1, :], loadings[pc2 - 1, :],
-                               c=contrib_sum, cmap='viridis')
+            colours = contrib_sum
 
+        scatter = ax.scatter(loadings[pc1 - 1, :], loadings[pc2 - 1, :],
+                            c=colours, cmap='viridis')
         cbar = plt.colorbar(scatter, ax=ax)
         cbar.set_label(color_by.capitalize())
         scatter.set_clim(0, 1)
+    else:
+        colours = color_by
+        scatter = ax.scatter(loadings[pc1 - 1, :], loadings[pc2 - 1, :], c = colours)
 
     for i in range(n):
         v1, v2 = loadings[pc1 - 1, i], loadings[pc2 - 1, i]
-        ax.arrow(0, 0, v1, v2, alpha = 0.5, head_width = 0.02, head_length = 0.02)
+        if color_by is None:
+            ax.arrow(0, 0, v1, v2, color = 'black', alpha = 0.3, head_width = 0.015,
+                     head_length = 0.015)
+        else:
+            ax.arrow(0, 0, v1, v2, color = scatter.to_rgba(colours[i]), alpha = 0.6,
+                     head_width = 0.015, head_length = 0.015)
         if draw_labels:
-            ax.text(v1 * 1.05, v2 * 1.05, variables[i], color = 'g', ha = 'center', va = 'center')
+            ax.text(v1 * 1.05, v2 * 1.05, variables[i], fontsize = 10, ha = 'center', va = 'center')
 
     ax.set_xlabel(f"PC {pc1}")
     ax.set_ylabel(f"PC {pc2}")
